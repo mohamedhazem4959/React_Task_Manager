@@ -1,11 +1,113 @@
-import { useState } from 'react';
+import { useReducer, useState } from 'react';
 import { data } from '../utils/data';
+import { BsThreeDots } from 'react-icons/bs';
+import { BiSort } from 'react-icons/bi';
+import { AiOutlineDown } from 'react-icons/ai';
+import type { DashboardAction, DashboardState } from './table.types';
+
+const initialState: DashboardState = {
+  sort: null,
+
+  filters: {
+    name: '',
+    country: '',
+    email: '',
+    project: '',
+    status: '',
+  },
+
+  pagination: {
+    currentPage: 1,
+    itemsPerPage: 5,
+  },
+};
+
+function dashboardReducer(
+  state: DashboardState,
+  action: DashboardAction,
+): DashboardState {
+  switch (action.type) {
+    case 'SORT': {
+      // sorting
+      const direction =
+        state.sort?.key === action.payload && state.sort.direction === 'asc'
+          ? 'desc'
+          : 'asc';
+      return {
+        ...state,
+        sort: {
+          key: action.payload,
+          direction,
+        },
+        pagination: {
+          ...state.pagination,
+          currentPage: 1,
+        },
+      };
+    }
+
+    default:
+      return state;
+  }
+}
 
 const Table = () => {
-  const [projects, setProjects] = useState<typeof data>(data);
+  const [state, dispatch] = useReducer(dashboardReducer, initialState);
+
+  const sortedProjects = [...data].sort((a, b) => {
+    if (!state.sort) return 0;
+
+    let comparison = 0;
+
+    switch (state.sort.key) {
+      case 'name':
+        comparison = a.client.localeCompare(b.client);
+        break;
+      case 'country':
+        comparison = a.country.localeCompare(b.country);
+        break;
+
+      case 'date':
+        comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+        break;
+      default:
+        return 0;
+    }
+    return state.sort.direction === 'asc' ? comparison : -comparison;
+  });
 
   return (
     <div className="p-4 w-[93%] ml-20">
+      {/* sorting */}
+      <div className="flex items-center mb-5">
+        <div className="flex items-center gap-3 mb-5">
+          <button
+            onClick={() => dispatch({ type: 'SORT', payload: 'name' })}
+            className="border border-gray-700 p-2 rounded text-white"
+          >
+            Sort by Name
+          </button>
+
+          <button
+            onClick={() => dispatch({ type: 'SORT', payload: 'country' })}
+            className="border border-gray-700 p-2 rounded text-white"
+          >
+            Sort by Country
+          </button>
+
+          <button
+            onClick={() => dispatch({ type: 'SORT', payload: 'date' })}
+            className="border border-gray-700 p-2 rounded text-white"
+          >
+            Sort by Date
+          </button>
+        </div>
+
+        {/* <button className="border border-gray-700 flex items-center justify-center text-white p-2 rounded">
+          <BiSort className="mr-[0.3rem]" /> Sort
+          <AiOutlineDown className="ml-2" />
+        </button> */}
+      </div>
       <table className="min-w-full table-auto rounded border border-gray-700 text-white">
         <thead>
           <tr>
@@ -21,7 +123,7 @@ const Table = () => {
           </tr>
         </thead>
         <tbody>
-          {projects.map((project, index) => (
+          {sortedProjects.map((project, index) => (
             <tr key={index} className="border border-gray-700">
               <td className="px-4 py-2">
                 <img
@@ -51,7 +153,11 @@ const Table = () => {
                 </span>
               </td>
               <td className="px-4 py-2">{project.date}</td>
-              <td className="px-4 py-2">...</td>
+              <td className="px-4 py-2">
+                <div className="relative">
+                  <BsThreeDots className="cursor" />
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
