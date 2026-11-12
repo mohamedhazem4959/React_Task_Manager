@@ -1,4 +1,4 @@
-type SortKey = 'name' | 'country' | 'date';
+type SortKey = 'client' | 'country' | 'date';
 type SortDirection = 'asc' | 'desc';
 
 export type DashboardState = {
@@ -8,7 +8,7 @@ export type DashboardState = {
   } | null;
 
   filters: {
-    name: string;
+    client: string;
     country: string;
     email: string;
     project: string;
@@ -26,7 +26,6 @@ export type DashboardAction =
   | { type: 'SORT'; payload: SortKey }
 
   //filtring
-  | { type: 'SEARCH'; payload: string }
   | { type: 'FILTER'; payload: { key: string; value: string } }
   | { type: 'RESET_FILTERS' }
 
