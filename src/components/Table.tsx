@@ -1,4 +1,4 @@
-import { useReducer, useState } from 'react';
+import { useMemo, useReducer, useState } from 'react';
 import { data } from '../utils/data';
 import { BsThreeDots } from 'react-icons/bs';
 import { BiSort } from 'react-icons/bi';
@@ -46,6 +46,16 @@ function dashboardReducer(
       };
     }
 
+    case 'CHANGE_PAGE': {
+      return {
+        ...state,
+        pagination: {
+          ...state.pagination,
+          currentPage: action.payload,
+        },
+      };
+    }
+
     default:
       return state;
   }
@@ -53,28 +63,41 @@ function dashboardReducer(
 
 const Table = () => {
   const [state, dispatch] = useReducer(dashboardReducer, initialState);
+  const { currentPage, itemsPerPage } = state.pagination;
 
-  const sortedProjects = [...data].sort((a, b) => {
-    if (!state.sort) return 0;
+  const sortedProjects = useMemo(() => {
+    if (!state.sort) return data;
 
-    let comparison = 0;
+    const { key, direction } = state.sort;
+    const factor = direction === 'asc' ? 1 : -1;
 
-    switch (state.sort.key) {
-      case 'name':
-        comparison = a.client.localeCompare(b.client);
-        break;
-      case 'country':
-        comparison = a.country.localeCompare(b.country);
-        break;
+    return [...data].sort((a, b) => {
+      switch (key) {
+        case 'name':
+          return a.client.localeCompare(b.client) * factor;
+        case 'country':
+          return a.country.localeCompare(b.country) * factor;
+        case 'date':
+          return (
+            (new Date(a.date).getTime() - new Date(b.date).getTime()) * factor
+          );
+        default:
+          return 0;
+      }
+    });
+  }, [state.sort]);
 
-      case 'date':
-        comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-        break;
-      default:
-        return 0;
-    }
-    return state.sort.direction === 'asc' ? comparison : -comparison;
-  });
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedProjects.length / itemsPerPage),
+  );
+
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const currentProjects = sortedProjects.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   return (
     <div className="p-4 w-[93%] ml-20">
@@ -123,7 +146,7 @@ const Table = () => {
           </tr>
         </thead>
         <tbody>
-          {sortedProjects.map((project, index) => (
+          {currentProjects.map((project, index) => (
             <tr key={index} className="border border-gray-700">
               <td className="px-4 py-2">
                 <img
@@ -162,6 +185,33 @@ const Table = () => {
           ))}
         </tbody>
       </table>
+      <button
+        className="border border-gray-700 p-2 rounded text-white"
+        onClick={() =>
+          dispatch({
+            type: 'CHANGE_PAGE',
+            payload: state.pagination.currentPage - 1,
+          })
+        }
+        disabled={state.pagination.currentPage === 1}
+      >
+        Previous
+      </button>
+      <button
+        className="border border-gray-700 p-2 rounded text-white"
+        onClick={() =>
+          dispatch({
+            type: 'CHANGE_PAGE',
+            payload: state.pagination.currentPage + 1,
+          })
+        }
+        disabled={
+          state.pagination.currentPage >=
+          Math.ceil(data.length / state.pagination.itemsPerPage)
+        }
+      >
+        Next
+      </button>
     </div>
   );
 };
